@@ -1072,3 +1072,23 @@ revision control and instant feedback.
 
 
 
+--- 2010-Oct-06 Wednesday 12:10am ---
+
+now i have things i want to add to brainfuck:
+  
+  - (comments, parens nestable.  option to make comments print as they execute)
+  - [0-9] = multiply by 10 and add digit value
+  - need way to clear data cell?
+  - merge program and data 
+    - program has builtin data segment, perhaps everything after the !
+    - can 'execute' constructed codes
+  - functions; closures; forth-like words; some mechanism to break down complexity and not repeat myself
+
+working through the tests and making them work is fun.  but i keep getting
+distracted by the fun stuff above.
+
+a virtual machine like brainfuck instead of a language?  the language
+is the not entirely unreadable asm of the vm.
+
+
+

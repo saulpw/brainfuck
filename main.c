@@ -1,22 +1,21 @@
 #include <assert.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <getopt.h>
+#include <memory.h>
 
-char data[30000] = { 0 };
-char *ptr = data;
+char data[30000];
+char *ptr;
 char program[30000] = { 0 };
-char *ip = program;
-int ncode = 0;
-int ndata = 0;
+char *ip;
+int ncode;
+int ndata;
 int debug = 0;
 int verbose = 0;
 
 void dump_state()
 {
-    if (!verbose) return;
     int i;
-    if (debug) printf("\nIP=% 8ld  ", ip - program);
-    printf("[% 8ld] Data[0-9] ", ptr - data);
+    printf("IP=%ld/%d DP=%ld/%d  ", ip - program, ncode, ptr - data, ndata);
     for (i=0; i < 10; i++)
         printf("% 3d ", data[i]);
 
@@ -25,16 +24,20 @@ void dump_state()
 
 void check_state()
 {
-    if (ip < program || ip > &program[ncode])
-        { dump_state(); assert(0); }
-    if (ptr < data || ptr > &data[4])
-        { dump_state(); assert(0); }
+    if (ip < program || ip > &program[ncode]
+     || ptr < data || ptr > &data[ndata]
+     || ndata >= sizeof(data))
+    { 
+        dump_state(); 
+        assert(0); 
+    }
 }
 
 
 void advance_data(int n)
 {
     ptr += n;
+    if (ptr - data > ndata) ndata = ptr - data;
 }
 
 void incr_data(int n)
@@ -44,7 +47,8 @@ void incr_data(int n)
 
 void out_comment()
 {
-    fprintf(stderr, "%c", *ip);
+    if (verbose)
+        fprintf(stderr, "%c", *ip);
 }
 
 void out_data()
@@ -59,7 +63,6 @@ void in_data()
 
 void begin_loop()
 {
-// all problems are the same problem, at their core
     if (*ptr == 0)
     {
         // if the byte at the data pointer is zero, then instead of
@@ -105,30 +108,14 @@ void end_loop()
     }
 }
 
-int
-main(int argc, const char *argv[])
+void execute()
 {
-    FILE *fp = fopen(argv[1], "r");
-    
-    if (fp == NULL)
-    {
-        perror(NULL);
-        exit(1);
-    }
-
-    // first read in the entire program
-    while (! feof(fp)) 
-    {
-        *ip = fgetc(fp);
-        ip++;
-        ncode++;
-    }
-    fclose(fp);
-
+    bzero(data, sizeof(data));
+    ptr = data;
     ip = program;
+    ndata = 0;
 
-    while (*ip != 0)
-    {
+    do { 
         if (debug) printf("%c", *ip);
 
         switch (*ip)
@@ -147,6 +134,45 @@ main(int argc, const char *argv[])
 
         ip++;
         check_state();
+    } while (*ip != 0);
+}
+
+int
+main(int argc, char *argv[])
+{
+    int opt;
+    while ((opt = getopt(argc, argv, "dv")) != -1) 
+    {
+        switch (opt) {
+            case 'd': ++debug; break;
+            case 'v': ++verbose; break;
+        };
+    }
+
+    while (optind < argc)
+    {
+        const char *fn = argv[optind];
+        FILE *fp = fopen(fn, "r");
+    
+        if (fp == NULL)
+        {
+            perror(fn);
+            continue;
+        }
+       
+        ncode = 0;
+        // first read in the entire program
+        while (! feof(fp)) 
+        {
+            program[ncode++] = fgetc(fp);
+        }
+
+        fclose(fp);
+
+        // assume non-null program
+        execute();
+
+        ++optind;
     }
 
     return 0;
