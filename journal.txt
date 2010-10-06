@@ -1,0 +1,1062 @@
+
+--- 2010-Oct-04 Monday 10:17pm ---
+
+First thing I did:
+
+$ cd svn/projects
+$ mkdir brainfuck
+$ cd brainfuck
+
+Then I created main.c (vertical whitespace removed):
+
+int main() { }
+
+and compiled it:
+
+$ cc -o brainfuck main.o
+
+and ran it:
+
+$ ./brainfuck
+$
+
+---
+
+paused to help a friend find a compile-time conditional solution:
+
+22:18 <@nebkor> Hey, Saul
+22:18 <@saul> ayup
+22:19 <@nebkor> do you know of a standard way to do compile-time conditionals?
+22:19 <@saul> in C++?
+22:19 <@nebkor> yeah
+22:19 <@nebkor> like, "only compile this code if foo" (beyond ifdef, etc.
+22:19 <@nebkor> )
+22:19 <@saul> compile, or include
+22:19 <@nebkor> compile
+22:20 <@nebkor> I need a static check of sizeof( size_t )
+22:20 <@saul> oh
+22:20 <@saul> boost::static_assert i think
+22:20 <@nebkor> alas, no; that's a way to kill the compile
+22:20 <@saul> BOOST_STATIC_ASSERT(std::numeric_limits<int>::digits >= 32);
+22:21 <@saul> you want it to run at startup and fail?
+22:21 <@nebkor> no
+22:21 <@saul> oh, if sizeof(size_t) == 4 then compile this code
+22:21 <@nebkor> yes :)
+22:21 <@saul> if 8 then this code
+22:21 <@nebkor> yep!
+22:21 <@saul> make =)
+22:21 <@saul> is the standard way
+22:21 <@nebkor> dang
+22:21 <@saul> what's your specific use-case
+22:22 <@nebkor>     T &operator[]( size_t i )
+22:22 <@nebkor>     {
+22:22 <@nebkor>         if ( sizeof( T ) == sizeof( MySizeT ) )
+22:22 <@nebkor>         {
+22:22 <@nebkor>             return m_vector[i];
+22:22 <@nebkor>         }
+22:22 <@nebkor>         else if ( sizeof( T ) == 4 ) // 32-bit machines
+22:22 <@nebkor>         {
+22:22 <@nebkor>             uint64_t addr = &(m_vector[i]);
+22:22 <@nebkor>             typedef boost::low_bits_mask_t<31> lowBitsMask;
+22:22 <@nebkor>             return *( static_cast<T*>( addr & 
+                lowBitsMask::sig_bits ) );
+22:22 <@nebkor>         }
+
+22:23 <@saul> oh!
+22:23 <@saul> i bet you can be clever about it
+22:24 <@saul> template <size_t N> inline T & op_helper(size_t i); T & 
+              operator[](size_t i) { return op_helper<sizeof(T)>(i); }
+22:25 <@nebkor> HMM!
+22:25 <@saul> template <size_t N> T & op_helper<sizeof(MySizeT)>(size_t i) { 
+              return m_vector[i]; }
+22:25 <@saul> s/size_t N// in that last line
+22:26 <@saul> and add: template <> T & op_helper<4>(size_t i) { ... }
+22:26 <@nebkor> yeah
+22:26 <@saul> and let me know how that works :)
+
+---
+
+and then I made a Makefile that did what I had just done, because I knew
+I would do it about a thousand more times before this project was done:
+
+brainfuck: main.c
+	cc -o brainfuck main.c
+	./brainfuck
+
+and of course I type 'make' and press <enter> instinctually:
+
+$ make
+cc -o brainfuck main.c
+./brainfuck
+make: *** [brainfuck] Error 200
+---
+heh, I accidentally made my first test.  Even though main() returns an int,
+I left out the actual return value, so I guess it was just returning whatever
+was left over from some random startup code.  In fact I think it returned 
+200 cuz I think that's how make works but I'm not 100% sure, and anyway,
+I get to fix my first issue!
+---
+
+return 0;
+
+$ make
+cc -o brainfuck main.c
+./brainfuck
+---
+so now I get uncomfortable with the combined pace of coding and writing,
+and a little bored by 'what i'm trying to do with this', so i let that
+chest feeling settle, and i search for a test brainfuck program which
+I paste into hello.bf:
+
+--- hello.bf
+(but the usual --- won't work to delineate brainfuck programs)
+=============================================================================
++++++ +++++             initialize counter (cell #0) to 10
+[                       use loop to set the next four cells to 70/100/30/10
+    > +++++ ++              add  7 to cell #1
+    > +++++ +++++           add 10 to cell #2 
+    > +++                   add  3 to cell #3
+    > +                     add  1 to cell #4
+    <<<< -                  decrement counter (cell #0)
+]                   
+> ++ .                  print 'H'
+> + .                   print 'e'
++++++ ++ .              print 'l'
+.                       print 'l'
++++ .                   print 'o'
+> ++ .                  print ' '
+<< +++++ +++++ +++++ .  print 'W'
+> .                     print 'o'
++++ .                   print 'r'
+----- - .               print 'l'
+----- --- .             print 'd'
+> + .                   print '!'
+> .                     print '\n'
+=============================================================================
+
+I type 'make' and almost hit enter before I realized that just creating a file
+on the disk doesn't do anything.  I have to give it to the program I
+just made:
+
+$ ./brainfuck hello.bf
+$
+
+but of course that doesn't do anything (yet).  I've typed this line
+manually probably thousands of times:
+
+int main(int argc, const char *argv[])
+
+but I can't remember the arguments to fread, so I reach for another window and
+
+$ man fread
+No manual entry for fread
+
+what?  oh.  haha.  that's actually kinda funny [shameful for a dev to not have
+manpages installed on his home machine...unless it means I don't need them. 
+Except I do].
+
+$ apt-cache search gcc man
+
+llvm - Low-Level Virtual Machine (LLVM) compiler for C/C++
+sparse - semantic parser of source files
+acovea - analysis of compiler options via evolutionary algorithms
+cstream - general-purpose stream-handling tool similar to dd
+cxref - Generates latex and HTML documentation for C programs
+gpc - The GNU Pascal compiler
+mcpp - Alternative C/C++ preprocessor
+open-cobol - COBOL compiler
+stalin - An extremely aggressive Scheme compiler
+uisp - Micro In-System Programmer for Atmel's AVR MCUs
+
+$ apt-cache search manpages
+
+debian-goodies - Small toolbox-style utilities for Debian systems
+devscripts - scripts to make the life of a Debian Package maintainer easier
+docbook-to-man - converter from DocBook SGML into roff man macros
+libdatrie-dev - Development files for double-array trie library
+libeet-doc - libeet1 API documentation
+manpages - Manual pages about using a GNU/Linux system
+manpages-dev - Manual pages about using GNU/Linux for development
+python-epydoc - tool for generating Python API documentation
+vim-common - Vi IMproved - Common files
+xorg-docs-core - Core documentation for the X.org X Window System
+manpages-posix - Manual pages about using POSIX system
+manpages-posix-dev - Manual pages about using a POSIX system for development
+asr-manpages - alt.sysadmin.recovery manual pages
+caspar-doc - documentation for caspar
+centerim-common - A text-mode multi-protocol instant messenger client (data files)
+csound-manpages - manual pages for csound
+cssc - Clone of the Unix SCCS revision-control system
+emdebian-grip - support for the Grip flavour of Emdebian
+emdebian-grip-server - server-side support for Emdebian Grip
+erlang-manpages - Erlang/OTP manual pages
+freebsd-manpages - Manual pages for a GNU/kFreeBSD system
+funny-manpages - more funny manpages
+gmanedit - GTK+ man pages editor
+gmt-doc - HTML documentation for GMT, the Generic Mapping Tools
+gmt-manpages - Manpages for the Generic Mapping Tools
+hdup - Filesystem duplicator and backup
+libcorelinux-dev - Foundation Classes, Design Patterns, IPC and Threads
+libecore-doc - Ecore API Documentation
+libeditline-dev - development files for libeditline
+libevas-doc - Evas API Documentation
+libfreefem-dev - Development library, header files and manpages
+libhdf4g-dev - The Hierarchical Data Format library -- development package
+liboping-dev - C/C++ library to generate ICMP_ECHO requests (development files)
+libsc-doc - The Scientific Computing Toolkit (Documentation)
+libsoqt-dev-common - Qt GUI component toolkit for Inventor - common development files
+libtar-dev - C library for manipulating tar archives
+lire-devel-doc - Developer's documentation for Lire
+lsh-doc - Secure Shell v2 (SSH2) client / server / utilities documentation
+man2html - browse man pages in your web browser
+manpages-cs - Czech version of the manual pages
+manpages-de - German manpages
+manpages-de-dev - German development manpages
+manpages-es - Spanish man pages
+manpages-es-extra - Spanish extra manpages
+manpages-fr - French version of the manual pages about using GNU/Linux
+manpages-fr-dev - French version of the development manual pages
+manpages-fr-extra - French version of the manual pages
+manpages-hu - Hungarian manpages
+manpages-it - Italian version of the manual pages
+manpages-ja - Japanese version of the manual pages (for users)
+manpages-ja-dev - Japanese version of the manual pages (for developers)
+manpages-pl - Polish man pages
+manpages-pl-dev - Polish man pages for developers
+manpages-pt - Portuguese Versions of the Manual Pages
+manpages-pt-dev - Portuguese Versions of the Manual Pages
+manpages-ru - Russian translations of Linux manpages
+manpages-tr - Turkish version of the manual pages
+manpages-zh - Chinese manual pages
+mcl-doc - documentation for mcl
+mpi-default-dev - Standard MPI development files
+tclx8.4-doc - Extended Tcl (TclX) - manpages
+troffcvt - Converts troff source to HTML, RTF, and plain text
+tulip-doc - Documentation for the Tulip graph-visualization system
+wordnet - electronic lexical database of English language
+wordnet-dev - electronic lexical database of English language (development library)
+xmanpages-ja - Japanese manual pages for X
+zoem - general-purpose macro/programming language for transforming text
+zoem-doc - documentation for zoem
+libssl-dev - SSL development libraries, header files and documentation
+
+There has to be a better way to do this.
+
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ apt-get install manpages-dev
+E: Could not open lock file /var/lib/dpkg/lock - open (13: Permission denied)
+E: Unable to lock the administration directory (/var/lib/dpkg/), are you root?
+$ sudo apt-get install manpages-dev
+Reading package lists... Done
+Building dependency tree       
+Reading state information... Done
+The following NEW packages will be installed:
+  manpages-dev
+0 upgraded, 1 newly installed, 0 to remove and 156 not upgraded.
+Need to get 1,546kB of archives.
+After this operation, 3,269kB of additional disk space will be used.
+Get:1 http://us.archive.ubuntu.com karmic/main manpages-dev 3.21-1 [1,546kB]
+90% [1 manpages-dev 1391217/1,546kB 90%]
+$ man fread
+---
+FREAD(3)                   Linux Programmer's Manual                  FREAD(3)
+
+NAME
+       fread, fwrite - binary stream input/output
+
+SYNOPSIS
+       #include <stdio.h>
+
+       size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+
+       size_t fwrite(const void *ptr, size_t size, size_t nmemb,
+                     FILE *stream);
+
+DESCRIPTION
+       The  function  fread()  reads  nmemb  elements of data, each size bytes
+       long, from the stream pointed to by stream, storing them at  the  loca‐
+       tion given by ptr.
+
+       The  function  fwrite()  writes nmemb elements of data, each size bytes
+       long, to the stream pointed to by stream, obtaining them from the loca‐
+       tion given by ptr.
+
+       For non-locking counterparts, see unlocked_stdio(3).
+
+RETURN VALUE
+       fread()  and  fwrite()  return the number of items successfully read or
+       written (i.e., not the number of characters).  If an error  occurs,  or
+       the  end-of-file is reached, the return value is a short item count (or
+       zero).
+
+       fread() does not distinguish between end-of-file and error, and callers
+       must use feof(3) and ferror(3) to determine which occurred.
+
+CONFORMING TO
+       C89, POSIX.1-2001.
+
+SEE ALSO
+       read(2), write(2), feof(3), ferror(3), unlocked_stdio(3)
+
+COLOPHON
+       This  page  is  part of release 3.21 of the Linux man-pages project.  A
+       description of the project, and information about reporting  bugs,  can
+       be found at http://www.kernel.org/doc/man-pages/.
+
+GNU                               1996-05-17                          FREAD(3)
+---
+
+14 years old and fits in 47 lines.  god bless.
+
+fread(fp, 
+
+oh right, this is probably more complicated then it needs to be.  Isn't there
+some other f-something that reads one character at a time?  like this is
+basic C, i should know this, but it's not in the SEE ALSO.  Hmm..
+
+$ man fopen (nothing rings a bell in SEE ALSO, although I note the date is
+much newer: 2009-02-23)
+$ man fgetch
+No manual entry for fgetch
+$ man getch
+No manual entry for getch
+$ man fgets
+---
+GETS(3)                    Linux Programmer's Manual                   GETS(3)
+
+NAME
+       fgetc,  fgets,  getc,  getchar,  gets, ungetc - input of characters and
+       strings
+
+SYNOPSIS
+       #include <stdio.h>
+
+       int fgetc(FILE *stream);
+
+       char *fgets(char *s, int size, FILE *stream);
+
+       int getc(FILE *stream);
+
+       int getchar(void);
+
+       char *gets(char *s);
+
+       int ungetc(int c, FILE *stream);
+
+DESCRIPTION
+       fgetc() reads the next character from  stream  and  returns  it  as  an
+       unsigned char cast to an int, or EOF on end of file or error.
+
+       getc()  is equivalent to fgetc() except that it may be implemented as a
+       macro which evaluates stream more than once.
+
+       getchar() is equivalent to getc(stdin).
+
+       gets() reads a line from stdin into the buffer pointed to  by  s  until
+       either  a  terminating newline or EOF, which it replaces with '\0'.  No
+       check for buffer overrun is performed (see BUGS below).
+
+       fgets() reads in at most one less than size characters from stream  and
+       stores  them  into  the buffer pointed to by s.  Reading stops after an
+       EOF or a newline.  If a newline is read, it is stored into the  buffer.
+       A '\0' is stored after the last character in the buffer.
+
+       ungetc()  pushes  c  back to stream, cast to unsigned char, where it is
+       available for subsequent read operations.  Pushed-back characters  will
+       be returned in reverse order; only one pushback is guaranteed.
+
+       Calls  to the functions described here can be mixed with each other and
+       with calls to other input functions from the stdio library for the same
+       input stream.
+
+       For non-locking counterparts, see unlocked_stdio(3).
+
+RETURN VALUE
+       fgetc(),  getc() and getchar() return the character read as an unsigned
+       char cast to an int or EOF on end of file or error.
+
+       gets() and fgets() return s on success, and NULL on error or  when  end
+       of file occurs while no characters have been read.
+
+CONFORMING TO
+       C89,  C99,  POSIX.1-2001.  LSB deprecates gets().  POSIX.1-2008 removes
+       the specification of gets().
+
+BUGS
+       Never use gets().  Because it is impossible to tell without knowing the
+       data  in  advance  how  many  characters  gets() will read, and because
+       gets() will continue to store characters past the end of the buffer, it
+       is  extremely  dangerous  to  use.   It has been used to break computer
+       security.  Use fgets() instead.
+
+       It is not advisable to mix calls to  input  functions  from  the  stdio
+       library with low-level calls to read(2) for the file descriptor associ‐
+       ated with the input stream; the results  will  be  undefined  and  very
+       probably not what you want.
+
+SEE ALSO
+       read(2), write(2), ferror(3), fgetwc(3), fgetws(3), fopen(3), fread(3),
+       fseek(3),  getline(3),  getwchar(3),  puts(3),  scanf(3),   ungetwc(3),
+       unlocked_stdio(3)
+
+COLOPHON
+       This  page  is  part of release 3.21 of the Linux man-pages project.  A
+       description of the project, and information about reporting  bugs,  can
+       be found at http://www.kernel.org/doc/man-pages/.
+
+GNU                               2008-08-06                           GETS(3)
+
+Finally.  But then:
+---
+22:55 <@nebkor> In file included from 
+/home/ardent/alembic/lib/Alembic/Util/Tests/DimensionsTestJeffs.cpp:35:
+22:55 <@nebkor> /home/ardent/alembic/lib/Alembic/Util/Dimensions.h:63: error: 
+                explicit specialization in non-namespace scope ‘class 
+                Alembic::Util::BaseDimensions<T>’
+22:55 <@nebkor> /home/ardent/alembic/lib/Alembic/Util/Dimensions.h:84: error: 
+                too many template-parameter-lists
+22:55 <@nebkor> /home/ardent/alembic/lib/Alembic/Util/Dimensions.h:100: error: 
+                too many template-parameter-lists
+23:05 <@nebkor> ah, well
+23:05 <@saul> man, that sucks
+23:05 <@saul> weird
+23:05 <@saul> wtf shit compiler is that
+---
+
+anyway, fgetc is exactly what I want:
+
+(fclose happened in a brainfart lull--and it makes me feel good about myself).
+
+well i'm bored without my dose of satisfaction so let's make this do SOMETHING,
+at least
+
+23:09 <@nebkor> gcc 4.3
+
+
+int
+main(int argc, const char *argv[])
+{
+    FILE *fp = fopen(argv[1], "r");
+
+    while (! feof(fp)) 
+    {
+        char ch = fgetc(fp);
+
+        printf("%c", ch);
+    }
+
+    fclose(fp);
+
+    return 0;
+}
+
+cc -o brainfuck main.c
+main.c: In function ‘main’:
+main.c:4: error: ‘FILE’ undeclared (first use in this function)
+main.c:4: error: (Each undeclared identifier is reported only once
+main.c:4: error: for each function it appears in.)
+main.c:4: error: ‘fp’ undeclared (first use in this function)
+main.c:10: warning: incompatible implicit declaration of built-in function ‘printf’
+make: *** [brainfuck] Error 1
+---
+I'm a little surprised that I get so many errors for code that I know 
+is completely legit.  oh right, undeclared:
+
+#include <stdio.h>
+
+$ make
+cc -o brainfuck main.c
+./brainfuck hello.bf
+
+(I had changed the Makefile earlier, instead of typing ./brainfuck
+as I wrote.  I wonder if I should have just been honest in the first
+place).
+
+cc -o brainfuck main.c
+./brainfuck hello.bf
++++++ +++++             initialize counter (cell #0) to 10
+[                       use loop to set the next four cells to 70/100/30/10
+    > +++++ ++              add  7 to cell #1
+    > +++++ +++++           add 10 to cell #2 
+    > +++                   add  3 to cell #3
+    > +                     add  1 to cell #4
+    <<<< -                  decrement counter (cell #0)
+]                   
+> ++ .                  print 'H'
+> + .                   print 'e'
++++++ ++ .              print 'l'
+.                       print 'l'
++++ .                   print 'o'
+> ++ .                  print ' '
+<< +++++ +++++ +++++ .  print 'W'
+> .                     print 'o'
++++ .                   print 'r'
+----- - .               print 'l'
+----- --- .             print 'd'
+> + .                   print '!'
+> .                     print '\n'
+�$
+
+Okay, yawning now, let's get this show on the road.  From what I read
+in the article, 
+
+    // right, we need a data pointer I think
+
+    char array[30000] = { 0 };
+    char *ptr = &array[0];  // or simply 'array'
+
+    while (! feof(fp)) 
+    {
+        char ch = fgetc(fp);
+
+        // in every moment, what is the right thing to do?
+
+        printf("%c", ch);
+
+        switch (ch)
+        {
+        case '>':
+            ++ptr;
+            break;
+        case '<':
+            --ptr;
+            break;
+        case '+':
+            ++*ptr;
+            break;
+        case '-':
+            --*ptr;
+            break;
+        case '.':
+            printf("%c", *ptr);
+            break;
+        case ',':
+            *ptr = getc();
+            break;
+        case '[':
+            if (*ptr == 0)
+                ... oh, right.
+            break;
+        case ']':
+            break;
+        };
+    }
+
+of course, okay, this is kind of neat actually.  not actually even necessarily
+obfuscated.  The name is becoming unfortunate though.
+
+okay, I need to store the program and make an instruction pointer, and how am I
+going to "match" the [] like parentheses?  i think first of a stack, but that
+would be easiest with C++ and i have a High Concept of keeping this as simple
+as possible.  So...
+
+
+
+
+#include <stdio.h>
+
+int
+main(int argc, const char *argv[])
+{
+    FILE *fp = fopen(argv[1], "r");
+
+    // right, we need a data pointer I think
+
+    char array[30000] = { 0 };
+    int data_ptr = 0;
+    char program[30000] = { 0 };
+    int instr_ptr = 0;
+
+    // first read in the entire program
+    while (! feof(fp)) 
+    {
+        program[instr_ptr++] = fgetc(fp);
+    }
+
+    instr_ptr = 0;
+
+    while (true)
+    {
+        // in every moment, what is the right thing to do?
+
+//        printf("%c", ch);
+
+        switch (ch)
+        {
+        case '>':
+            ++data_ptr;
+            break;
+        case '<':
+            --data_ptr;
+            break;
+        case '+':
+            ++*data_ptr;
+            break;
+        case '-':
+            --*data_ptr;
+            break;
+        case '.':
+            printf("%c", *data_ptr);
+            break;
+        case ',':
+            *data_ptr = getc();
+            break;
+        case '[':
+        // all problems are the same problem, at their core
+            if (*instr_ptr == 0)
+            {
+                // if the byte at the data pointer is zero, then instead of
+                // moving the instruction pointer forward to the next command,
+                // jump it forward to the command after the matching ]
+                // command*.
+            }
+            break;
+        case ']':
+            if (*instr_ptr != 0)
+            {
+                // if the byte at the data pointer is nonzero, then instead of
+                // moving the instruction pointer forward to the next command,
+                // jump it back to the command after the matching [ command*.
+            }
+            break;
+        };
+    }
+
+    fclose(fp);
+
+    return 0;
+}
+
+and...i'm kinda bored.  11:38pm and I'm doing what?  I need some stim:
+
+cc -o brainfuck main.c
+main.c: In function ‘main’:
+main.c:23: error: ‘true’ undeclared (first use in this function)
+main.c:23: error: (Each undeclared identifier is reported only once
+main.c:23: error: for each function it appears in.)
+main.c:29: error: ‘ch’ undeclared (first use in this function)
+main.c:38: error: invalid type argument of ‘unary *’ (have ‘int’)
+main.c:41: error: invalid type argument of ‘unary *’ (have ‘int’)
+main.c:44: error: invalid type argument of ‘unary *’ (have ‘int’)
+main.c:47: error: invalid type argument of ‘unary *’ (have ‘int’)
+main.c:47: error: too few arguments to function ‘_IO_getc’
+main.c:51: error: invalid type argument of ‘unary *’ (have ‘int’)
+main.c:60: error: invalid type argument of ‘unary *’ (have ‘int’)
+make: *** [brainfuck] Error 1
+
+okay now that's motivating.
+
+and then i nearly got bored of doing the clerical cleanup work (some
+repetitive blah blah details that are more annoying to type than
+to just fix.  but each one represents a little thing I've learned
+how to do and seems relevant if I'm going to document it.  word vomit).
+push through.
+
+I'm beginning to doubt my choice of variable names.  maybe ptr and ip would
+have been better.  maybe instead of int indexes into their respective arrays,
+they should be pointers like in the wikipedia article, so i can just cutnpaste
+code.  oh well, let's just get it compiling again:
+
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+cc -o brainfuck main.c
+main.c: In function ‘main’:
+main.c:37: error: ‘data’ undeclared (first use in this function)
+main.c:37: error: (Each undeclared identifier is reported only once
+main.c:37: error: for each function it appears in.)
+main.c:46: error: too few arguments to function ‘_IO_getc’
+make: *** [brainfuck] Error 1
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+cc -o brainfuck main.c
+main.c: In function ‘main’:
+main.c:46: error: too few arguments to function ‘_IO_getc’
+make: *** [brainfuck] Error 1
+
+$ man getc
+    ...
+    getchar()
+    ...
+
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+cc -o brainfuck main.c
+./brainfuck hello.bf
+
+and...it hangs without saying anything.  hehe.  typical.
+
+oh right, I didn't implement those two instructions.  hm.  how to do...
+
+I break down and
+
+#define IP &program[instr_ptr]
+#define PTR &array[data_ptr]
+
+:%s/program[instr_ptr]/IP
+:%s/program\[instr_ptr\]/IP
+
+                int n = 0;
+                while (n != 0 || IP != ']')
+                {
+                    if (IP == '[')
+                        n++;
+                    else if (IP == ']')
+                        n--;
+                }
+
+i realize that using a stack for the second case is an efficiency improvement
+and completely unnecessary and overcomplicated.  just do inverse of the upper
+loop.  beginner mind.
+
+i break down after writing half the ] and cutnpaste the code from the [. 
+instr_ptr++ becomes instr_ptr-- in ] though, and ']'.  and n++/n-- reversed.
+clerical work.
+
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+cc -o brainfuck main.c
+main.c: In function ‘main’:
+main.c:31: error: ‘IP’ undeclared (first use in this function)
+main.c:31: error: (Each undeclared identifier is reported only once
+main.c:31: error: for each function it appears in.)
+make: *** [brainfuck] Error 1
+
+erm...oh right, substitution was global
+
+:%s/program\[instr_ptr\]/IP
+
+and anyway, I realize that a pointer is easier.
+
+    char data[30000] = { 0 };
+    char *ptr = data;
+    char program[30000] = { 0 };
+    char *ip = program;
+
+:%s/instr_ptr/ip/g
+...
+            if (*ip == 0)
+            {
+                // if the byte at the data pointer is zero, then instead of
+                // moving the instruction pointer forward to the next command,
+                // jump it forward to the command after the matching ]
+                // command*.
+                int n = 0;
+                do {
+                    ip++;
+                    if (*ip == '[')
+                        n++;
+                    else if (*ip == ']')
+                        n--;
+                }
+                while (n != 0 || *ip != ']');
+                ip++;
+            }
+            break;
+        case ']':
+            if (*ip != 0)
+            {
+                // if the byte at the data pointer is nonzero, then instead of
+                // moving the instruction pointer forward to the next command,
+                // jump it back to the command after the matching [ command*.
+                int n = 0;
+                do {
+                    ip--;
+                    if (*ip == '[')
+                        n--;
+                    else if (*ip == ']')
+                        n++;
+                }
+                while (n != 0 || *ip != ']');
+                ip++;
+            }
+            break;
+
+--- 2010-Oct-05 Tuesday 12:05am ---
+
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+cc -o brainfuck main.c
+main.c: In function ‘main’:
+main.c:31: error: ‘IP’ undeclared (first use in this function)
+main.c:31: error: (Each undeclared identifier is reported only once
+main.c:31: error: for each function it appears in.)
+make: *** [brainfuck] Error 1
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+cc -o brainfuck main.c
+main.c:3:9: error: macro names must be identifiers
+main.c:4:9: error: macro names must be identifiers
+main.c: In function ‘main’:
+main.c:21: error: array subscript is not an integer
+make: *** [brainfuck] Error 1
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+cc -o brainfuck main.c
+main.c: In function ‘main’:
+main.c:18: error: array subscript is not an integer
+make: *** [brainfuck] Error 1
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+cc -o brainfuck main.c
+./brainfuck hello.bf
+make: *** [brainfuck] Segmentation fault
+make: *** Deleting file `brainfuck'
+---
+yup, pretty much the standard second outcome when you do anything non-trivial.
+(first is hang with no output).
+
+$ gdb brainfuck
+GNU gdb (GDB) 7.0-ubuntu
+Copyright (C) 2009 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>...
+brainfuck: No such file or directory.
+(gdb)
+
+test: brainfuck
+	./brainfuck hello.bf
+
+brainfuck: main.c
+	cc -o brainfuck main.c
+
+$ make
+cc -o brainfuck main.c
+./brainfuck hello.bf
+make: *** [test] Segmentation fault
+$ gdb brainfuck
+...
+Reading symbols from /home/saul/sitelabor/projects/brainfuck/brainfuck...done.
+(gdb) run
+Starting program: /home/saul/sitelabor/projects/brainfuck/brainfuck 
+
+Program received signal SIGSEGV, Segmentation fault.
+_IO_feof (fp=0x0) at feof.c:37
+37	feof.c: No such file or directory.
+	in feof.c
+(gdb) bt
+#0  _IO_feof (fp=0x0) at feof.c:37
+#1  0x0000000000400771 in main ()
+
+right, fp is NULL ("0x0" is 0 in hex).  the fopen must be failing.
+    FILE *fp = fopen(argv[1], "r");
+    
+    if (fp == NULL)
+    {
+        perror(NULL);
+        exit(1);
+    }
+
+    // first read in the entire program
+    while (! feof(fp)) 
+    {
+        *ip = fgetc(fp);
+        ip++;
+    }
+
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+cc -o brainfuck main.c
+main.c: In function ‘main’:
+
+and it hangs again.
+
+well, the fopen seems to be working now.  weird.
+
+rm brainfuck
+make a couple more times for good measure.
+
+
+uncomment the printf
+
+all pluses.
+
+ip++
+
+cc -o brainfuck main.c
+main.c: In function ‘main’:
+main.c:16: warning: incompatible implicit declaration of built-in function ‘exit’
+./brainfuck hello.bf
++++++ +++++             initialize counter (cell #0) to 10
+[                       use loop to set the next four cells to 70/100/30/10
+    > +++++ ++              add  7 to cell #1
+    > +++++ +++++           add 10 to cell #2 
+    > +++                   add  3 to cell #3
+    > +                     add  1 to cell #4
+    <<<< -                  decrement counter (cell #0)
+make: *** [test] Segmentation fault
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ gdb brianfu
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ gdb brianfuck
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ gdb brainfuck
+Bad ...
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ ^C
+
+
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ ulimit -c unlimited
+$ make
+make: *** [test] Segmentation fault (core dumped)
+
+whee!
+$ gdb brainfuck core
+Core was generated by `./brainfuck hello.bf'.
+Program terminated with signal 11, Segmentation fault.
+#0  0x0000000000400981 in main ()
+(gdb) bt
+#0  0x0000000000400981 in main ()
+
+haha.  everything that can go wrong, does.  nothing goes smoothly.
+
+test: brainfuck
+	./brainfuck hello.bf
+
+brainfuck: main.c
+	cc -ggdb -o brainfuck main.c
+
+clean:
+	rm brainfuck
+
+$ make clean
+
+and of course the actions in makefiles have to be tabbed with a proper ^I tab instead of a number of spaces.  in 2010.
+
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ make clean
+rm brainfuck
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+cc -ggdb -o brainfuck main.c
+main.c: In function ‘main’:
+main.c:16: warning: incompatible implicit declaration of built-in function ‘exit’
+./brainfuck hello.bf
++++++ +++++             initialize counter (cell #0) to 10
+[                       use loop to set the next four cells to 70/100/30/10
+    > +++++ ++              add  7 to cell #1
+    > +++++ +++++           add 10 to cell #2 
+    > +++                   add  3 to cell #3
+    > +                     add  1 to cell #4
+    <<<< -                  decrement counter (cell #0)
+make: *** [test] Segmentation fault (core dumped)
+
+$ gdb brainfuck
+$ gdb brainfuck cire
+$ gdb brainfuck core
+
+Core was generated by `./brainfuck hello.bf'.
+Program terminated with signal 11, Segmentation fault.
+#0  0x0000000000400981 in main (argc=2, argv=0x7fff4af5b6a8) at main.c:82
+82	                    if (*ip == '[')
+
+what's after "decrement counter"?
+
+ah, debugging ].  shouldn't this just work? :)
+
+i'm so clever:
+
+printf("\b");
+
+but then i anticipate backspace not working over newlines:
+        if (*ip != '\n')
+            printf("%c", *ip);
+
+of course it doesn't help.  but:
+
+$ make 
+cc -ggdb -o brainfuck main.c
+main.c: In function ‘main’:
+main.c:16: warning: incompatible implicit declaration of built-in function ‘exit’
+./brainfuck hello.bf
++++++ +++++             initialize counter (cell #0) to 10
+[                       use loop to set the next four cells to 70/100/30/10
+    > +++++ ++              add  7 to cell #1
+    > +++++ +++++           add 10 to cell #2 
+    > +++                   add  3 to cell #3
+    > +                     add  1 to cell #4
+    <<<< -                  decrement counter (cell #0)
+]]
+)0# llec( retnuoc tnemerced                  - <<<<    
+4# llec ot 1  dda                     + >    
+3# llec ot 3  dda                   +++ >    
+ 2# llec ot 01 dda           +++++ +++++ >    
+1# llec ot 7  dda              ++ +++++ >    
+01/03/001/07 ot sllec ruof txen eht tes ot pool esu                       [
+01 ot )0# llec( retnuoc ezilaitini             +++++ +++++������c`��b��`��c��@	�+Q�f��@P��c��+Q����+Q�g!x��c��@P
++Q������c��+Q�g/��c��+Q�@0�+Q����
+                                   ���+Q�g�ٶL�Ҵ��!�
+                                                         +Q�fa�+Q�����`+Q�`@,��b�(��b�+Q�?�X+Q�?���b����b��+Q�@�+Q+Q�@�+Q�>�ʐ����b��+Q�@���b�9�=�@X+Q�a`@,+Q�@X+Q�@�+Q�`<��b��+Q�`!���b�(<+Q�>����b�+Q�@P=��b�
+
+---
+oh interesting, it's not stopping at the [ like I thought.  hmm..
+
+theory that int n = 1 would fix it (but it doesn't).
+
+                    printf("%d %c\n", *ip);
+
+...
+                    printf("%d %c\n", n, *ip);
+
+put ip++ and ip-- at the end of the loop instead
+1 [
+
+int n = 1;
+
+then while (*ip != 0)
+
+---
+
+what's wrong?  maybe it just needs to run for awhile?
+
+-O2
+
+...nope...15 seconds...
+
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ gdb ./brainfuck hello.bf 
+Reading symbols from /home/saul/sitelabor/projects/brainfuck/brainfuck...done.
+"/home/saul/sitelabor/projects/brainfuck/hello.bf" is not a core dump: File format not recognized
+(gdb) qui
+saul@saul-desktop:~/sitelabor/projects/brainfuck$ gdb ./brainfuck 
+(gdb) run hello.bf 
+Starting program: /home/saul/sitelabor/projects/brainfuck/brainfuck hello.bf
+^C
+Program received signal SIGINT, Interrupt.
+main (argc=2, argv=0x7fffffffe358) at main.c:84
+84	                    else if (*ip == ']')
+
+hmmm...inspect...think...remove ip++ from inner loops.  still 'hangs'.  haha.
+
+Program received signal SIGINT, Interrupt.
+main (argc=<value optimized out>, argv=<value optimized out>) at main.c:84
+84	                        n++;
+(gdb) bt
+#0  main (argc=<value optimized out>, argv=<value optimized out>) at main.c:84
+
+remove -O2
+
+i look at line 84.  it's just the n++, of course.  but it's only when *ip == ']'.  i've seen this a couple of times, and it's weird that of all the places
+to stop, it keeps stopping here when it's ], even though that's not a very
+frequent character in the text.
+
+so i think, maybe it's just going back and forth?  think...
+
+and i have to sleep on it.  2.5 hours so far (but a lot of other things and
+writing too). 
+--- 2010-Oct-05 Tuesday 10:41pm ---
+
+finally branched out beyond http://en.wikipedia.org/wiki/Brainfuck:
+
+-> http://www.iwriteiam.nl/Ha_bf_inter.html (BF interpreter written in BF)
+   -> http://www.hevanet.com/cristofd/dbfi.b
+      -> http://www.hevanet.com/cristofd/brainfuck/
+         -> http://www.hevanet.com/cristofd/brainfuck/epistle.html
+            -> http://www.iwriteiam.nl/Ha_BF.html
+
+The # command (dump state) will be useful for debugging my interpreter;
+The ! command (separate code from input) helps with automated tests.
+
+
+---
+
+Worked through exactly what would happen at the first ] block and changed
+n != 1 to n != 0.  added begin/loop printfs.  added CHECK whereever ip was
+changed:
+
+#define CHECK assert(ip >= program && ip < &program[ncode])
+
+... and now i'm so in the flow of coding that i decided to use svn to track
+my progress at a minute level.
+
+
+
+
+
