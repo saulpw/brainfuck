@@ -4,9 +4,9 @@
 
 #define CHECK do { \
     if (ip < program || ip > &program[ncode])  \
-        { printf("Bad Ip: %ld\n", ip - program); assert(0); } \
-    if (ptr < data || ptr > &data[30000])  \
-        { printf("Bad Data Ptr: %ld\n", ptr - data); assert(0); } \
+        { printf("Bad Ip: %ld\n", ip - program); dump_state(); assert(0); } \
+    if (ptr < data || ptr > &data[4])  \
+        { printf("Bad Data Ptr: %ld\n", ptr - data); dump_state(); assert(0); } \
 } while (0)
 
 char data[30000] = { 0 };
@@ -16,8 +16,9 @@ char *ip = program;
 
 void dump_state()
 {
-    printf("IP = %ld, DP = %ld\nData[0-15]  ", ip - program, ptr - data);
-    for (int i=0; i < 16; i++)
+    int i;
+    printf("[% 8ld] Data[0-9] ", ptr - data);
+    for (i=0; i < 10; i++)
         printf("% 3d ", data[i]);
 
     printf("\n");
@@ -74,7 +75,7 @@ main(int argc, const char *argv[])
             break;
         case '[':
         // all problems are the same problem, at their core
-            if (*ip == 0)
+            if (*ptr == 0)
             {
                 // if the byte at the data pointer is zero, then instead of
                 // moving the instruction pointer forward to the next command,
@@ -97,7 +98,7 @@ main(int argc, const char *argv[])
             }
             break;
         case ']':
-            if (*ip != 0)
+            if (*ptr != 0)
             {
                 // if the byte at the data pointer is nonzero, then instead of
                 // moving the instruction pointer forward to the next command,
