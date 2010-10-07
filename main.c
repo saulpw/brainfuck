@@ -3,9 +3,9 @@
 #include <getopt.h>
 #include <memory.h>
 
-char data[30000];
+char program[60000] = { 0 };
+char *data;
 char *ptr;
-char program[30000] = { 0 };
 char *ip;
 int ncode;
 int ndata;
@@ -26,7 +26,7 @@ void check_state()
 {
     if (ip < program || ip > &program[ncode]
      || ptr < data || ptr > &data[ndata]
-     || ndata >= sizeof(data))
+     || ndata >= sizeof(program) - ncode)
     { 
         dump_state(); 
         assert(0); 
@@ -37,7 +37,10 @@ void check_state()
 void advance_data(int n)
 {
     ptr += n;
-    if (ptr - data > ndata) ndata = ptr - data;
+    if (ptr - data > ndata) {
+        ndata = ptr - data;
+        if (debug) { printf("[first use]"); dump_state(); }
+    }
 }
 
 void incr_data(int n)
@@ -61,74 +64,77 @@ void in_data()
     *ptr = getchar();
 }
 
-void begin_loop()
+void comment()
 {
-    if (*ptr == 0)
-    {
-        // if the byte at the data pointer is zero, then instead of
-        // moving the instruction pointer forward to the next command,
-        // jump it forward to the command after the matching ]
-        // command*.
-        int n = 1;
-        do {
-            ip++;
-            check_state();
-            if (*ip == '[') {
-                n++;
-            } else if (*ip == ']') {
-                n--;
-            }
-        }
-        while (n != 0 || *ip != ']');
-    }
+    do {
+        ip++;
+        if (*ip == '(') 
+            comment();
+    } while (*ip != ')');
+    ip++;
 }
 
-void end_loop()
+// dir = 1 or -1
+int find(const char *p, int dir, char c, char recurse)
 {
-    if (*ptr != 0)
-    {
-        // if the byte at the data pointer is nonzero, then instead of
-        // moving the instruction pointer forward to the next command,
-        // jump it back to the command after the matching [ command*.
-        int n = 1;
-        do {
-            ip--;
+    int n = 0;
+    do {
+        n += dir;
+        if (p[n] == recurse)
+            find(p + n, dir, c, recurse);
+    } while (p[n] != c);
 
-            check_state();
-            if (debug) printf("%c", *ip);
-
-            if (*ip == '[')
-            {
-                n--;
-            } else if (*ip == ']') {
-                n++;
-            }
-        }
-        while (n != 0 || *ip != '[');
-    }
+    return n * dir;
 }
+
+void scan_ip(int dirlevel, char recurse, char match)
+{
+    int dir = dirlevel > 0 ? 1 : -1;
+    do {
+        ip += dir;
+        check_state();
+
+        if (*ip == recurse)
+            scan_ip(dirlevel + dir, recurse, match);
+    } while (*ip != match);
+}
+
+#define EXTRA
 
 void execute()
 {
-    bzero(data, sizeof(data));
+    data = &program[ncode];
+
     ptr = data;
     ip = program;
     ndata = 0;
 
     do { 
-        if (debug) printf("%c", *ip);
+        if (debug && verbose) printf("%c", *ip);
 
         switch (*ip)
         {
-        case '#': dump_state(); break;
         case '>': advance_data(1); break;
         case '<': advance_data(-1); break;
         case '+': incr_data(1); break;
         case '-': incr_data(-1); break;
         case '.': out_data(); break;
         case ',': in_data(); break;
-        case '[': begin_loop(); break;
-        case ']': end_loop(); break;
+        case '[': if (*ptr == 0) { ip += find(ip, 1, ']', '['); } break;
+        case ']': if (*ptr != 0) { ip += find(ip, -1, '[', ']'); } break;
+#ifdef EXTRA
+        case '#': dump_state(); break;
+        case '(': comment(); break;
+        case '1': 
+        case '2': 
+        case '3': 
+        case '4': 
+        case '5': 
+        case '6': 
+        case '7': 
+        case '8': 
+        case '9': *ptr += *ip - '0'; break;
+#endif
         default:  out_comment(); break;
         };
 
@@ -160,8 +166,9 @@ main(int argc, char *argv[])
             continue;
         }
        
+        bzero(program, sizeof(program));
         ncode = 0;
-        // first read in the entire program
+
         while (! feof(fp)) 
         {
             program[ncode++] = fgetc(fp);
