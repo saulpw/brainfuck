@@ -1091,4 +1091,7 @@ a virtual machine like brainfuck instead of a language?  the language
 is the not entirely unreadable asm of the vm.
 
 
+--- 2010-Oct-11 Monday 10:59pm ---
 
+Cleaned up the code to my interpreter, moving my alternate vm into another
+directory. 
