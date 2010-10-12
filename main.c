@@ -8,29 +8,21 @@ char data[30000] = { 0 };
 int dp = 0;
 int ip = 0;
 int ncode = 0;
-int debug = 0;
 int verbose = 0;
+int extensions = 0;
+FILE *fpinput;
+FILE *fpgolden = NULL;
 
 void dump_state()
 {
     int i;
-    printf("IP=%d %c  DP=%d  ", ip, code[ip], dp);
+    fprintf(stderr, "IP=%d %c  DP=%d  ", ip, code[ip], dp);
+
     for (i=0; i < 10; i++)
-        printf("% 3d ", data[i]);
+        fprintf(stderr, "% 3d ", data[i]);
 
-    printf("\n");
+    fprintf(stderr, "\n");
 }
-
-void check_state()
-{
-    if (ip < 0 || ip > ncode
-     || dp < 0 || dp > sizeof(data))
-    { 
-        dump_state(); 
-        assert(0); 
-    }
-}
-
 
 void advance_data(int n)
 {
@@ -42,20 +34,24 @@ void incr_data(int n)
     data[dp] += n;
 }
 
-void out_comment()
-{
-    if (verbose)
-        fprintf(stderr, "%c", code[ip]);
-}
-
 void out_data()
 {
-    printf("%c", data[dp]);
+    if (verbose || !fpgolden)
+        printf("%c", data[dp]);
+
+    if (fpgolden)
+    {
+        char ch = fgetc(fpgolden);
+        if (data[dp] != ch)
+        {
+            fprintf(stderr, "Unexpected output! '%c' != '%c'\n", data[dp], ch);
+        } 
+    }
 }
 
 void in_data()
 {
-    data[dp] = getchar();
+    data[dp] = getc(fpinput);
 }
 
 #ifdef RECURSIVE_SCAN
@@ -101,7 +97,7 @@ void loop_if_nonzero()
         ip = scan(code, ip, -1, '[', ']');
 }
 
-void execute()
+int execute()
 {
     bzero(data, sizeof(data));
 
@@ -109,9 +105,14 @@ void execute()
     ip = 0;
 
     do { 
-        check_state();
+        if (ip < 0 || ip > ncode || dp < 0 || dp > sizeof(data))
+        {
+            fprintf(stderr, "out-of-bounds: ");
+            dump_state(); 
+            return -1;
+        }
 
-        if (debug) dump_state();
+        if (verbose >= 3) dump_state();
 
         switch (code[ip])
         {
@@ -123,8 +124,9 @@ void execute()
         case ',': in_data(); break;
         case '[': skip_if_zero(); break;
         case ']': loop_if_nonzero(); break;
-        case '#': dump_state(); break;
-        default:  out_comment(); break;
+
+        case '#': if (extensions) dump_state(); break;
+        default:  if (verbose >= 2) fprintf(stderr, "%c", code[ip]); break;
         };
 
         ip++;
@@ -135,18 +137,36 @@ void execute()
 int main(int argc, char *argv[])
 {
     int opt;
-    while ((opt = getopt(argc, argv, "dv")) != -1) 
+    char *fngolden = NULL;
+
+    while ((opt = getopt(argc, argv, "vxt:")) != -1) 
     {
         switch (opt) {
-            case 'd': ++debug; break;
-            case 'v': ++verbose; break;
+        case 'v': ++verbose; break;
+        case 'x': ++extensions; break;
+        case 't': fngolden = optarg; break;
         };
     }
+
+    if (fngolden)
+    {
+        fpgolden = fopen(fngolden, "r");
+        if (fpgolden == NULL)
+            perror(fngolden);
+    }
+
+    if (optind == argc)
+    {
+        fprintf(stderr, "No input program\n");
+        return 0;
+    }    
 
     while (optind < argc)
     {
         const char *fn = argv[optind];
         FILE *fp = fopen(fn, "r");
+
+        fpinput = stdin;
     
         if (fp == NULL)
         {
@@ -155,19 +175,44 @@ int main(int argc, char *argv[])
         }
        
         bzero(code, sizeof(code));
-
         ncode = 0;
 
-        while (! feof(fp)) 
-        {
-            code[ncode++] = fgetc(fp);
-        }
+        char ch;
 
-        fclose(fp);
+        do {
+            ch = fgetc(fp);
+
+            if (extensions && ch == '!')
+            {
+                if (verbose) 
+                    fprintf(stderr, "using input from '%s'\n", fn);
+
+                fpinput = fp;
+                break;
+            } 
+
+            code[ncode++] = ch;
+        } while (ch != EOF);
 
         // assume non-null program
         execute();
 
+        fclose(fp);
+
+        if (fpgolden)
+        {
+            int n = 0;
+            while ((ch = fgetc(fpgolden)) != EOF)
+            {
+                if (n++ == 0)
+                    fprintf(stderr, "\nRemaining in '%s': ", fngolden);
+                fputc(ch, stderr);
+            }
+            if (n > 0)
+                fprintf(stderr, "\n%d more characters of output expected.\n", n);
+
+            fclose(fpgolden);
+        }
         ++optind;
     }
 
