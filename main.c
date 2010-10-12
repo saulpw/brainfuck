@@ -125,7 +125,7 @@ int execute()
         case '[': skip_if_zero(); break;
         case ']': loop_if_nonzero(); break;
 
-        case '#': if (extensions) dump_state(); break;
+        case '#': if (extensions && verbose) dump_state(); break;
         default:  if (verbose >= 2) fprintf(stderr, "%c", code[ip]); break;
         };
 
