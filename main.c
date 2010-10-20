@@ -3,14 +3,14 @@
 #include <getopt.h>
 #include <memory.h>
 
-char code[30000] = { 0 };
-char data[30000] = { 0 };
+char code[30000];
+char data[30000];
 int dp = 0;
 int ip = 0;
 int ncode = 0;
 int verbose = 0;
 int extensions = 0;
-FILE *fpinput;
+FILE *fpinput = NULL;
 FILE *fpgolden = NULL;
 
 void dump_state()
@@ -24,19 +24,9 @@ void dump_state()
     fprintf(stderr, "\n");
 }
 
-void advance_data(int n)
-{
-    dp += n;
-}
-
-void incr_data(int n)
-{
-    data[dp] += n;
-}
-
 void out_data()
 {
-    if (verbose || !fpgolden)
+    if (fpgolden == NULL || verbose)
         printf("%c", data[dp]);
 
     if (fpgolden)
@@ -49,27 +39,7 @@ void out_data()
     }
 }
 
-void in_data()
-{
-    data[dp] = getc(fpinput);
-}
-
-#ifdef RECURSIVE_SCAN
-int scan(const char *p, int start, int dir, char match, char recurse)
-{
-    int idx = start;
-    do {
-        assert (idx >= 0);
-        idx += dir;
-
-        if (p[idx] == recurse)
-            idx = scan(p, idx, dir, match, recurse) + dir;
-    } while (p[idx] != match);
-
-    return idx;
-}
-#else
-int scan(const char *p, int start, int dir, char match, char recurse)
+static int scan(const char *p, int start, int dir, char match, char recurse)
 {
     int idx = start;
     int n = 1;
@@ -83,7 +53,6 @@ int scan(const char *p, int start, int dir, char match, char recurse)
 
     return idx;
 }
-#endif
 
 void skip_if_zero()
 {
@@ -116,14 +85,14 @@ int execute()
 
         switch (code[ip])
         {
-        case '>': advance_data(1); break;
-        case '<': advance_data(-1); break;
-        case '+': incr_data(1); break;
-        case '-': incr_data(-1); break;
-        case '.': out_data(); break;
-        case ',': in_data(); break;
+        case '>': dp += 1; break;
+        case '<': dp -= 1; break;
+        case '+': data[dp] += 1; break;
+        case '-': data[dp] -= 1; break;
         case '[': skip_if_zero(); break;
         case ']': loop_if_nonzero(); break;
+        case '.': out_data(); break;
+        case ',': data[dp] = getc(fpinput); break;
 
         case '#': if (extensions && verbose) dump_state(); break;
         default:  if (verbose >= 2) fprintf(stderr, "%c", code[ip]); break;
@@ -148,13 +117,6 @@ int main(int argc, char *argv[])
         };
     }
 
-    if (fngolden)
-    {
-        fpgolden = fopen(fngolden, "r");
-        if (fpgolden == NULL)
-            perror(fngolden);
-    }
-
     if (optind == argc)
     {
         fprintf(stderr, "No input program\n");
@@ -166,14 +128,23 @@ int main(int argc, char *argv[])
         const char *fn = argv[optind];
         FILE *fp = fopen(fn, "r");
 
-        fpinput = stdin;
-    
         if (fp == NULL)
         {
             perror(fn);
             continue;
         }
        
+        fpinput = stdin;
+    
+        if (fngolden)
+        {
+            fpgolden = fopen(fngolden, "r");
+            if (fpgolden == NULL)
+                perror(fngolden);
+        }
+
+        // load instructions into memory
+
         bzero(code, sizeof(code));
         ncode = 0;
 
@@ -194,13 +165,16 @@ int main(int argc, char *argv[])
             code[ncode++] = ch;
         } while (ch != EOF);
 
-        // assume non-null program
+        // execute instructions
         execute();
 
+        // keep fp open during execution in case it was the input source
         fclose(fp);
 
         if (fpgolden)
         {
+            // check for remaining expected output
+
             int n = 0;
             while ((ch = fgetc(fpgolden)) != EOF)
             {
@@ -213,6 +187,8 @@ int main(int argc, char *argv[])
 
             fclose(fpgolden);
         }
+
+        // next file (will compare against same golden output
         ++optind;
     }
 
