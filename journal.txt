@@ -3,11 +3,11 @@
 
 First thing I did:
 
-$ cd svn/projects
+$ cd src
 $ mkdir brainfuck
 $ cd brainfuck
 
-Then I created main.c (vertical whitespace removed):
+Then I created main.c:
 
 int main() { }
 
@@ -89,6 +89,7 @@ $ make
 cc -o brainfuck main.c
 ./brainfuck
 make: *** [brainfuck] Error 200
+
 ---
 heh, I accidentally made my first test.  Even though main() returns an int,
 I left out the actual return value, so I guess it was just returning whatever
@@ -109,7 +110,7 @@ chest feeling settle, and i search for a test brainfuck program which
 I paste into hello.bf:
 
 --- hello.bf
-(but the usual --- won't work to delineate brainfuck programs)
+(the usual '---' won't work to delineate brainfuck programs)
 =============================================================================
 +++++ +++++             initialize counter (cell #0) to 10
 [                       use loop to set the next four cells to 70/100/30/10
@@ -242,9 +243,10 @@ libssl-dev - SSL development libraries, header files and documentation
 
 There has to be a better way to do this.
 
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ apt-get install manpages-dev
+$ apt-get install manpages-dev
 E: Could not open lock file /var/lib/dpkg/lock - open (13: Permission denied)
 E: Unable to lock the administration directory (/var/lib/dpkg/), are you root?
+
 $ sudo apt-get install manpages-dev
 Reading package lists... Done
 Building dependency tree       
@@ -256,6 +258,7 @@ Need to get 1,546kB of archives.
 After this operation, 3,269kB of additional disk space will be used.
 Get:1 http://us.archive.ubuntu.com karmic/main manpages-dev 3.21-1 [1,546kB]
 90% [1 manpages-dev 1391217/1,546kB 90%]
+
 $ man fread
 ---
 FREAD(3)                   Linux Programmer's Manual                  FREAD(3)
@@ -656,7 +659,7 @@ have been better.  maybe instead of int indexes into their respective arrays,
 they should be pointers like in the wikipedia article, so i can just cutnpaste
 code.  oh well, let's just get it compiling again:
 
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+$ make
 cc -o brainfuck main.c
 main.c: In function ‘main’:
 main.c:37: error: ‘data’ undeclared (first use in this function)
@@ -664,7 +667,7 @@ main.c:37: error: (Each undeclared identifier is reported only once
 main.c:37: error: for each function it appears in.)
 main.c:46: error: too few arguments to function ‘_IO_getc’
 make: *** [brainfuck] Error 1
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+$ make
 cc -o brainfuck main.c
 main.c: In function ‘main’:
 main.c:46: error: too few arguments to function ‘_IO_getc’
@@ -675,7 +678,7 @@ $ man getc
     getchar()
     ...
 
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+$ make
 cc -o brainfuck main.c
 ./brainfuck hello.bf
 
@@ -708,7 +711,7 @@ i break down after writing half the ] and cutnpaste the code from the [.
 instr_ptr++ becomes instr_ptr-- in ] though, and ']'.  and n++/n-- reversed.
 clerical work.
 
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+$ make
 cc -o brainfuck main.c
 main.c: In function ‘main’:
 main.c:31: error: ‘IP’ undeclared (first use in this function)
@@ -768,26 +771,29 @@ and anyway, I realize that a pointer is easier.
 
 --- 2010-Oct-05 Tuesday 12:05am ---
 
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+$ make
 cc -o brainfuck main.c
 main.c: In function ‘main’:
 main.c:31: error: ‘IP’ undeclared (first use in this function)
 main.c:31: error: (Each undeclared identifier is reported only once
 main.c:31: error: for each function it appears in.)
 make: *** [brainfuck] Error 1
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+
+$ make
 cc -o brainfuck main.c
 main.c:3:9: error: macro names must be identifiers
 main.c:4:9: error: macro names must be identifiers
 main.c: In function ‘main’:
 main.c:21: error: array subscript is not an integer
 make: *** [brainfuck] Error 1
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+
+$ make
 cc -o brainfuck main.c
 main.c: In function ‘main’:
 main.c:18: error: array subscript is not an integer
 make: *** [brainfuck] Error 1
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+
+$ make
 cc -o brainfuck main.c
 ./brainfuck hello.bf
 make: *** [brainfuck] Segmentation fault
@@ -819,11 +825,12 @@ $ make
 cc -o brainfuck main.c
 ./brainfuck hello.bf
 make: *** [test] Segmentation fault
+
 $ gdb brainfuck
 ...
-Reading symbols from /home/saul/sitelabor/projects/brainfuck/brainfuck...done.
+Reading symbols from /home/saul/src/brainfuck/brainfuck...done.
 (gdb) run
-Starting program: /home/saul/sitelabor/projects/brainfuck/brainfuck 
+Starting program: /home/saul/src/brainfuck/brainfuck 
 
 Program received signal SIGSEGV, Segmentation fault.
 _IO_feof (fp=0x0) at feof.c:37
@@ -849,7 +856,7 @@ right, fp is NULL ("0x0" is 0 in hex).  the fopen must be failing.
         ip++;
     }
 
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+$ make
 cc -o brainfuck main.c
 main.c: In function ‘main’:
 
@@ -879,14 +886,14 @@ main.c:16: warning: incompatible implicit declaration of built-in function ‘ex
     > +                     add  1 to cell #4
     <<<< -                  decrement counter (cell #0)
 make: *** [test] Segmentation fault
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ gdb brianfu
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ gdb brianfuck
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ gdb brainfuck
+$ gdb brianfu
+$ gdb brianfuck
+$ gdb brainfuck
 Bad ...
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ ^C
+$ ^C
 
 
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ ulimit -c unlimited
+$ ulimit -c unlimited
 $ make
 make: *** [test] Segmentation fault (core dumped)
 
@@ -913,9 +920,9 @@ $ make clean
 
 and of course the actions in makefiles have to be tabbed with a proper ^I tab instead of a number of spaces.  in 2010.
 
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ make clean
+$ make clean
 rm brainfuck
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ make
+$ make
 cc -ggdb -o brainfuck main.c
 main.c: In function ‘main’:
 main.c:16: warning: incompatible implicit declaration of built-in function ‘exit’
@@ -997,17 +1004,17 @@ then while (*ip != 0)
 
 what's wrong?  maybe it just needs to run for awhile?
 
--O2
+(added -O2 to Makefile)
 
 ...nope...15 seconds...
 
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ gdb ./brainfuck hello.bf 
-Reading symbols from /home/saul/sitelabor/projects/brainfuck/brainfuck...done.
-"/home/saul/sitelabor/projects/brainfuck/hello.bf" is not a core dump: File format not recognized
+$ gdb ./brainfuck hello.bf 
+Reading symbols from /home/saul/src/brainfuck/brainfuck...done.
+"/home/saul/src/brainfuck/hello.bf" is not a core dump: File format not recognized
 (gdb) qui
-saul@saul-desktop:~/sitelabor/projects/brainfuck$ gdb ./brainfuck 
+$ gdb ./brainfuck 
 (gdb) run hello.bf 
-Starting program: /home/saul/sitelabor/projects/brainfuck/brainfuck hello.bf
+Starting program: /home/saul/src/brainfuck/brainfuck hello.bf
 ^C
 Program received signal SIGINT, Interrupt.
 main (argc=2, argv=0x7fffffffe358) at main.c:84
@@ -1031,6 +1038,7 @@ so i think, maybe it's just going back and forth?  think...
 
 and i have to sleep on it.  2.5 hours so far (but a lot of other things and
 writing too). 
+
 --- 2010-Oct-05 Tuesday 10:41pm ---
 
 finally branched out beyond http://en.wikipedia.org/wiki/Brainfuck:
@@ -1043,7 +1051,6 @@ finally branched out beyond http://en.wikipedia.org/wiki/Brainfuck:
 
 The # command (dump state) will be useful for debugging my interpreter;
 The ! command (separate code from input) helps with automated tests.
-
 
 ---
 
@@ -1069,29 +1076,3 @@ look at to determine program state, and remove the rest.  maybe add an option
 or two to the program.  this is now the fun part, a safe playground with
 revision control and instant feedback.
 
-
-
-
---- 2010-Oct-06 Wednesday 12:10am ---
-
-now i have things i want to add to brainfuck:
-  
-  - (comments, parens nestable.  option to make comments print as they execute)
-  - [0-9] = multiply by 10 and add digit value
-  - need way to clear data cell?
-  - merge program and data 
-    - program has builtin data segment, perhaps everything after the !
-    - can 'execute' constructed codes
-  - functions; closures; forth-like words; some mechanism to break down complexity and not repeat myself
-
-working through the tests and making them work is fun.  but i keep getting
-distracted by the fun stuff above.
-
-a virtual machine like brainfuck instead of a language?  the language
-is the not entirely unreadable asm of the vm.
-
-
---- 2010-Oct-11 Monday 10:59pm ---
-
-Cleaned up the code to my interpreter, moving my alternate vm into another
-directory. 
