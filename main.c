@@ -5,15 +5,15 @@
 
 char code[30000];
 char data[30000];
+int opcodes[256];
 int dp = 0;
-int ip = 0;
 int ncode = 0;
 int verbose = 0;
 int extensions = 0;
 FILE *fpinput = NULL;
 FILE *fpgolden = NULL;
 
-void dump_state()
+void dump_state(int ip)
 {
     int i;
     fprintf(stderr, "IP=%d %c  DP=%d  ", ip, code[ip], dp);
@@ -54,53 +54,79 @@ static int scan(const char *p, int start, int dir, char match, char recurse)
     return idx;
 }
 
-void skip_if_zero()
+int skip_if_zero(int ip)
 {
     if (data[dp] == 0)
         ip = scan(code, ip, 1, ']', '[');
+
+    return ip;
 }
 
-void loop_if_nonzero()
+int loop_if_nonzero(int ip)
 {
     if (data[dp] != 0) 
         ip = scan(code, ip, -1, '[', ']');
+
+    return ip;
 }
 
-int execute()
+int compile(int ip)
 {
-    bzero(data, sizeof(data));
+    char op = code[ip+1];
 
-    dp = 0;
-    ip = 0;
+    if (opcodes[op] != 0) {
+        error("opcode '%c' previously defined", op);
+        return;
+    }
 
-    do { 
+    opcodes[op] = ip+2;
+
+    return scan(code, ip, 1, '}', '{');
+}
+
+int execute(int ip)
+{
+    while (1) { 
         if (ip < 0 || ip > ncode || dp < 0 || dp > sizeof(data))
         {
             fprintf(stderr, "out-of-bounds: ");
-            dump_state(); 
+            dump_state(ip); 
             return -1;
         }
 
-        if (verbose >= 3) dump_state();
+        char op = code[ip];
 
-        switch (code[ip])
+        if (verbose >= 3) dump_state(ip);
+
+        switch (op)
         {
+        case 0: return 0;  // program end
         case '>': dp += 1; break;
         case '<': dp -= 1; break;
         case '+': data[dp] += 1; break;
         case '-': data[dp] -= 1; break;
-        case '[': skip_if_zero(); break;
-        case ']': loop_if_nonzero(); break;
+        case '[': ip = skip_if_zero(ip); break;
+        case ']': ip = loop_if_nonzero(ip); break;
         case '.': out_data(); break;
         case ',': data[dp] = getc(fpinput); break;
 
-        case '#': if (extensions && verbose) dump_state(); break;
-        default:  if (verbose >= 2) fprintf(stderr, "%c", code[ip]); break;
+        case '#': if (extensions && verbose) dump_state(ip); break;
+
+        case '_': if (extensions) data[dp] = 0; break;
+        case '{': if (extensions) ip = compile(ip); break;
+        case '}': if (extensions) return 1;  // procedure end
+
+        default:  if (extensions) {
+                      if (opcodes[op] != 0) {
+                        int r = execute(opcodes[op]);
+                        if (r <= 0) return r;
+                      } 
+                  } else if (verbose >= 2) fprintf(stderr, "%c", op);
+                  break;
         };
 
-        ip++;
-
-    } while (code[ip] != 0);
+        ip += 1;
+    }
 }
 
 int main(int argc, char *argv[])
@@ -125,7 +151,7 @@ int main(int argc, char *argv[])
 
     while (optind < argc)
     {
-        const char *fn = argv[optind];
+        const char *fn = argv[optind++];
         FILE *fp = fopen(fn, "r");
 
         if (fp == NULL)
@@ -165,8 +191,13 @@ int main(int argc, char *argv[])
             code[ncode++] = ch;
         } while (ch != EOF);
 
-        // execute instructions
-        execute();
+        bzero(data, sizeof(data));
+        bzero(opcodes, sizeof(opcodes));
+
+        dp = 0;
+
+        // execute starting at ip=0
+        execute(0);
 
         // keep fp open during execution in case it was the input source
         fclose(fp);
@@ -188,8 +219,7 @@ int main(int argc, char *argv[])
             fclose(fpgolden);
         }
 
-        // next file (will compare against same golden output
-        ++optind;
+        // next file (will compare against same golden output)
     }
 
     return 0;
