@@ -112,7 +112,6 @@ int execute(int ip)
 
         case '#': if (extensions && verbose) dump_state(ip); break;
 
-        case '_': if (extensions) data[dp] = 0; break;
         case '{': if (extensions) ip = compile(ip); break;
         case '}': if (extensions) return 1;  // procedure end
 
