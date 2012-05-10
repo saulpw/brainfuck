@@ -5,11 +5,12 @@
 
 char code[30000];
 char data[30000];
+#ifndef NO_EXTENSIONS
 int opcodes[256];
+#endif
 int dp = 0;
 int ncode = 0;
 int verbose = 0;
-int extensions = 0;
 FILE *fpinput = NULL;
 FILE *fpgolden = NULL;
 
@@ -24,17 +25,17 @@ void dump_state(int ip)
     fprintf(stderr, "\n");
 }
 
-void out_data()
+void out_data(char d)
 {
     if (fpgolden == NULL || verbose)
-        printf("%c", data[dp]);
+        printf("%c", d);
 
     if (fpgolden)
     {
         char ch = fgetc(fpgolden);
-        if (data[dp] != ch)
+        if (d != ch)
         {
-            fprintf(stderr, "Unexpected output! '%c' != '%c'\n", data[dp], ch);
+            fprintf(stderr, "Unexpected output '%c' != golden '%c'\n", d, ch);
         } 
     }
 }
@@ -54,36 +55,6 @@ static int scan(const char *p, int start, int dir, char match, char recurse)
     return idx;
 }
 
-int skip_if_zero(int ip)
-{
-    if (data[dp] == 0)
-        ip = scan(code, ip, 1, ']', '[');
-
-    return ip;
-}
-
-int loop_if_nonzero(int ip)
-{
-    if (data[dp] != 0) 
-        ip = scan(code, ip, -1, '[', ']');
-
-    return ip;
-}
-
-int compile(int ip)
-{
-    char op = code[ip+1];
-
-    if (opcodes[op] != 0) {
-        error("opcode '%c' previously defined", op);
-        return;
-    }
-
-    opcodes[op] = ip+2;
-
-    return scan(code, ip, 1, '}', '{');
-}
-
 int execute(int ip)
 {
     while (1) { 
@@ -100,27 +71,40 @@ int execute(int ip)
 
         switch (op)
         {
-        case 0: return 0;  // program end
         case '>': dp += 1; break;
         case '<': dp -= 1; break;
         case '+': data[dp] += 1; break;
         case '-': data[dp] -= 1; break;
-        case '[': ip = skip_if_zero(ip); break;
-        case ']': ip = loop_if_nonzero(ip); break;
-        case '.': out_data(); break;
+        case '.': out_data(data[dp]); break;
         case ',': data[dp] = getc(fpinput); break;
 
-        case '#': if (extensions && verbose) dump_state(ip); break;
+        case '[': if (data[dp] == 0) // skip if zero
+                    ip = scan(code, ip, 1, ']', '[');
+                  break;
 
-        case '{': if (extensions) ip = compile(ip); break;
-        case '}': if (extensions) return 1;  // procedure end
+        case ']': if (data[dp] != 0) // loop if nonzero
+                    ip = scan(code, ip, -1, '[', ']');
+                  break;
 
-        default:  if (extensions) {
-                      if (opcodes[op] != 0) {
-                        int r = execute(opcodes[op]);
-                        if (r <= 0) return r;
-                      } 
-                  } else if (verbose >= 2) fprintf(stderr, "%c", op);
+#ifndef NO_EXTENSIONS
+        case '#': if (verbose) dump_state(ip); break;
+
+        case '{': // compile a new opcode
+                  opcodes[ code[ip+1] ] = ip+2;
+                  ip = scan(code, ip, 1, '}', '{');
+                  break;
+
+        case '}': return 1;  // procedure end
+        case 0:   return 0;  // program end
+#endif
+        default:
+#ifndef NO_EXTENSIONS
+                  if (opcodes[op] != 0) {
+                    int r = execute(opcodes[op]);
+                    if (r <= 0) return r;
+                  } else 
+#endif
+                  if (verbose >= 2) fprintf(stderr, "%c", op);
                   break;
         };
 
@@ -137,7 +121,6 @@ int main(int argc, char *argv[])
     {
         switch (opt) {
         case 'v': ++verbose; break;
-        case 'x': ++extensions; break;
         case 't': fngolden = optarg; break;
         };
     }
@@ -178,7 +161,8 @@ int main(int argc, char *argv[])
         do {
             ch = fgetc(fp);
 
-            if (extensions && ch == '!')
+#ifndef NO_EXTENSIONS
+            if (ch == '!')
             {
                 if (verbose) 
                     fprintf(stderr, "using input from '%s'\n", fn);
@@ -186,12 +170,15 @@ int main(int argc, char *argv[])
                 fpinput = fp;
                 break;
             } 
+#endif
 
             code[ncode++] = ch;
         } while (ch != EOF);
 
         bzero(data, sizeof(data));
+#ifndef NO_EXTENSIONS
         bzero(opcodes, sizeof(opcodes));
+#endif
 
         dp = 0;
 
