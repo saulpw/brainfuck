@@ -86,6 +86,8 @@ int execute(int ip)
                     ip = scan(code, ip, -1, '[', ']');
                   break;
 
+        case 0:   return 0;  // program end
+
 #ifndef NO_EXTENSIONS
         case '#': if (verbose) dump_state(ip); break;
 
@@ -95,7 +97,6 @@ int execute(int ip)
                   break;
 
         case '}': return 1;  // procedure end
-        case 0:   return 0;  // program end
 #endif
         default:
 #ifndef NO_EXTENSIONS
