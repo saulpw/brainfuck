@@ -45,7 +45,8 @@ static int scan(const char *p, int start, int dir, char match, char recurse)
     int idx = start;
     int n = 1;
     do {
-        assert (idx >= 0);
+        if (idx < 0 || idx > ncode) return -2; // out-of-bounds
+
         idx += dir;
 
         if (p[idx] == recurse)    ++n;
@@ -118,7 +119,7 @@ int main(int argc, char *argv[])
     int opt;
     char *fngolden = NULL;
 
-    while ((opt = getopt(argc, argv, "vxt:")) != -1) 
+    while ((opt = getopt(argc, argv, "vt:")) != -1) 
     {
         switch (opt) {
         case 'v': ++verbose; break;

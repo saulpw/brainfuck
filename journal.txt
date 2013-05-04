@@ -1064,15 +1064,26 @@ changed:
 my progress at a minute level.
 
 stupid bug.  checking if *ip is 0 rather than *ptr.  haha.  teach me to
-code while stoned :D
+code while tired :D
 
 but then it works, nearly instantly printing out Hello world (I wasn't sure
 at first if maybe it just took forever to run a program, but it really
 didn't seem right).  commit.
 
-now what?  clean up code!  it's fun.  and i have a test so i don't break the program.  or maybe i should get more test programs?  in a bit. first i'm going to
-turn debugging back on and see what things are useful and interesting to
+now what?  clean up code!  it's fun.  and i have a test so i don't break the
+program.  or maybe i should get more test programs?  in a bit. first i'm going
+to turn debugging back on and see what things are useful and interesting to
 look at to determine program state, and remove the rest.  maybe add an option
 or two to the program.  this is now the fun part, a safe playground with
 revision control and instant feedback.
+
+--- 2013-May-04 Saturday  1:47am ---
+
+Just rediscovered this project last night; I had gotten it to a good point and
+checked it into github with an extension for subroutines: '{a' defines the
+opcode 'a' to call the routine starting at the opcode following the 'a'.  When
+the subsequent '}' is executed, it 'returns'.  Any unused opcode is valid.
+
+It's about 10 lines of code.  Simple but powerful.  Cleaned the tests
+up a bit, thinking about how to make a bf compressor that uses it.
 
