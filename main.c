@@ -40,7 +40,7 @@ void out_data(char d)
     }
 }
 
-static int scan(const char *p, int start, int dir, char match, char recurse)
+int scan(const char *p, int start, int dir, char match, char recurse)
 {
     int idx = start;
     int n = 1;
