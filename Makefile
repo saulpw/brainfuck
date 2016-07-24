@@ -9,7 +9,7 @@ passes: brainfuck $(PASSTESTS:golden=output)
 fails: brainfuck $(FAILTESTS:fail=error)
 
 brainfuck: main.c
-	cc -ggdb -o brainfuck main.c
+	cc -ggdb -O2 -o brainfuck main.c
 
 tests/%.output: tests/%.golden tests/%.b
 	./brainfuck -t tests/$*.golden tests/$*.b

@@ -20,62 +20,6 @@ and ran it:
 $ ./brainfuck
 $
 
----
-
-paused to help a friend find a compile-time conditional solution:
-
-22:18 <@nebkor> Hey, Saul
-22:18 <@saul> ayup
-22:19 <@nebkor> do you know of a standard way to do compile-time conditionals?
-22:19 <@saul> in C++?
-22:19 <@nebkor> yeah
-22:19 <@nebkor> like, "only compile this code if foo" (beyond ifdef, etc.
-22:19 <@nebkor> )
-22:19 <@saul> compile, or include
-22:19 <@nebkor> compile
-22:20 <@nebkor> I need a static check of sizeof( size_t )
-22:20 <@saul> oh
-22:20 <@saul> boost::static_assert i think
-22:20 <@nebkor> alas, no; that's a way to kill the compile
-22:20 <@saul> BOOST_STATIC_ASSERT(std::numeric_limits<int>::digits >= 32);
-22:21 <@saul> you want it to run at startup and fail?
-22:21 <@nebkor> no
-22:21 <@saul> oh, if sizeof(size_t) == 4 then compile this code
-22:21 <@nebkor> yes :)
-22:21 <@saul> if 8 then this code
-22:21 <@nebkor> yep!
-22:21 <@saul> make =)
-22:21 <@saul> is the standard way
-22:21 <@nebkor> dang
-22:21 <@saul> what's your specific use-case
-22:22 <@nebkor>     T &operator[]( size_t i )
-22:22 <@nebkor>     {
-22:22 <@nebkor>         if ( sizeof( T ) == sizeof( MySizeT ) )
-22:22 <@nebkor>         {
-22:22 <@nebkor>             return m_vector[i];
-22:22 <@nebkor>         }
-22:22 <@nebkor>         else if ( sizeof( T ) == 4 ) // 32-bit machines
-22:22 <@nebkor>         {
-22:22 <@nebkor>             uint64_t addr = &(m_vector[i]);
-22:22 <@nebkor>             typedef boost::low_bits_mask_t<31> lowBitsMask;
-22:22 <@nebkor>             return *( static_cast<T*>( addr & 
-                lowBitsMask::sig_bits ) );
-22:22 <@nebkor>         }
-
-22:23 <@saul> oh!
-22:23 <@saul> i bet you can be clever about it
-22:24 <@saul> template <size_t N> inline T & op_helper(size_t i); T & 
-              operator[](size_t i) { return op_helper<sizeof(T)>(i); }
-22:25 <@nebkor> HMM!
-22:25 <@saul> template <size_t N> T & op_helper<sizeof(MySizeT)>(size_t i) { 
-              return m_vector[i]; }
-22:25 <@saul> s/size_t N// in that last line
-22:26 <@saul> and add: template <> T & op_helper<4>(size_t i) { ... }
-22:26 <@nebkor> yeah
-22:26 <@saul> and let me know how that works :)
-
----
-
 and then I made a Makefile that did what I had just done, because I knew
 I would do it about a thousand more times before this project was done:
 
@@ -91,7 +35,7 @@ cc -o brainfuck main.c
 make: *** [brainfuck] Error 200
 
 ---
-heh, I accidentally made my first test.  Even though main() returns an int,
+I accidentally made my first test.  Even though main() returns an int,
 I left out the actual return value, so I guess it was just returning whatever
 was left over from some random startup code.  In fact I think it returned 
 200 cuz I think that's how make works but I'm not 100% sure, and anyway,
@@ -104,9 +48,10 @@ $ make
 cc -o brainfuck main.c
 ./brainfuck
 ---
-so now I get uncomfortable with the combined pace of coding and writing,
-and a little bored by 'what i'm trying to do with this', so i let that
-chest feeling settle, and i search for a test brainfuck program which
+
+So then I get uncomfortable with the combined pace of coding and writing,
+and a little bored by 'what i'm trying to do with this', so I let that
+chest feeling settle, and I search for a test brainfuck program which
 I paste into hello.bf:
 
 --- hello.bf
@@ -135,7 +80,7 @@ I paste into hello.bf:
 > .                     print '\n'
 =============================================================================
 
-I type 'make' and almost hit enter before I realized that just creating a file
+I type 'make' and almost hit enter before I realize that just creating a file
 on the disk doesn't do anything.  I have to give it to the program I
 just made:
 
@@ -152,114 +97,11 @@ but I can't remember the arguments to fread, so I reach for another window and
 $ man fread
 No manual entry for fread
 
-what?  oh.  haha.  that's actually kinda funny [shameful for a dev to not have
-manpages installed on his home machine...unless it means I don't need them. 
-Except I do].
-
-$ apt-cache search gcc man
-
-llvm - Low-Level Virtual Machine (LLVM) compiler for C/C++
-sparse - semantic parser of source files
-acovea - analysis of compiler options via evolutionary algorithms
-cstream - general-purpose stream-handling tool similar to dd
-cxref - Generates latex and HTML documentation for C programs
-gpc - The GNU Pascal compiler
-mcpp - Alternative C/C++ preprocessor
-open-cobol - COBOL compiler
-stalin - An extremely aggressive Scheme compiler
-uisp - Micro In-System Programmer for Atmel's AVR MCUs
-
-$ apt-cache search manpages
-
-debian-goodies - Small toolbox-style utilities for Debian systems
-devscripts - scripts to make the life of a Debian Package maintainer easier
-docbook-to-man - converter from DocBook SGML into roff man macros
-libdatrie-dev - Development files for double-array trie library
-libeet-doc - libeet1 API documentation
-manpages - Manual pages about using a GNU/Linux system
-manpages-dev - Manual pages about using GNU/Linux for development
-python-epydoc - tool for generating Python API documentation
-vim-common - Vi IMproved - Common files
-xorg-docs-core - Core documentation for the X.org X Window System
-manpages-posix - Manual pages about using POSIX system
-manpages-posix-dev - Manual pages about using a POSIX system for development
-asr-manpages - alt.sysadmin.recovery manual pages
-caspar-doc - documentation for caspar
-centerim-common - A text-mode multi-protocol instant messenger client (data files)
-csound-manpages - manual pages for csound
-cssc - Clone of the Unix SCCS revision-control system
-emdebian-grip - support for the Grip flavour of Emdebian
-emdebian-grip-server - server-side support for Emdebian Grip
-erlang-manpages - Erlang/OTP manual pages
-freebsd-manpages - Manual pages for a GNU/kFreeBSD system
-funny-manpages - more funny manpages
-gmanedit - GTK+ man pages editor
-gmt-doc - HTML documentation for GMT, the Generic Mapping Tools
-gmt-manpages - Manpages for the Generic Mapping Tools
-hdup - Filesystem duplicator and backup
-libcorelinux-dev - Foundation Classes, Design Patterns, IPC and Threads
-libecore-doc - Ecore API Documentation
-libeditline-dev - development files for libeditline
-libevas-doc - Evas API Documentation
-libfreefem-dev - Development library, header files and manpages
-libhdf4g-dev - The Hierarchical Data Format library -- development package
-liboping-dev - C/C++ library to generate ICMP_ECHO requests (development files)
-libsc-doc - The Scientific Computing Toolkit (Documentation)
-libsoqt-dev-common - Qt GUI component toolkit for Inventor - common development files
-libtar-dev - C library for manipulating tar archives
-lire-devel-doc - Developer's documentation for Lire
-lsh-doc - Secure Shell v2 (SSH2) client / server / utilities documentation
-man2html - browse man pages in your web browser
-manpages-cs - Czech version of the manual pages
-manpages-de - German manpages
-manpages-de-dev - German development manpages
-manpages-es - Spanish man pages
-manpages-es-extra - Spanish extra manpages
-manpages-fr - French version of the manual pages about using GNU/Linux
-manpages-fr-dev - French version of the development manual pages
-manpages-fr-extra - French version of the manual pages
-manpages-hu - Hungarian manpages
-manpages-it - Italian version of the manual pages
-manpages-ja - Japanese version of the manual pages (for users)
-manpages-ja-dev - Japanese version of the manual pages (for developers)
-manpages-pl - Polish man pages
-manpages-pl-dev - Polish man pages for developers
-manpages-pt - Portuguese Versions of the Manual Pages
-manpages-pt-dev - Portuguese Versions of the Manual Pages
-manpages-ru - Russian translations of Linux manpages
-manpages-tr - Turkish version of the manual pages
-manpages-zh - Chinese manual pages
-mcl-doc - documentation for mcl
-mpi-default-dev - Standard MPI development files
-tclx8.4-doc - Extended Tcl (TclX) - manpages
-troffcvt - Converts troff source to HTML, RTF, and plain text
-tulip-doc - Documentation for the Tulip graph-visualization system
-wordnet - electronic lexical database of English language
-wordnet-dev - electronic lexical database of English language (development library)
-xmanpages-ja - Japanese manual pages for X
-zoem - general-purpose macro/programming language for transforming text
-zoem-doc - documentation for zoem
-libssl-dev - SSL development libraries, header files and documentation
-
-There has to be a better way to do this.
-
-$ apt-get install manpages-dev
-E: Could not open lock file /var/lib/dpkg/lock - open (13: Permission denied)
-E: Unable to lock the administration directory (/var/lib/dpkg/), are you root?
-
 $ sudo apt-get install manpages-dev
-Reading package lists... Done
-Building dependency tree       
-Reading state information... Done
-The following NEW packages will be installed:
-  manpages-dev
-0 upgraded, 1 newly installed, 0 to remove and 156 not upgraded.
-Need to get 1,546kB of archives.
-After this operation, 3,269kB of additional disk space will be used.
-Get:1 http://us.archive.ubuntu.com karmic/main manpages-dev 3.21-1 [1,546kB]
 90% [1 manpages-dev 1391217/1,546kB 90%]
 
 $ man fread
+
 ---
 FREAD(3)                   Linux Programmer's Manual                  FREAD(3)
 
@@ -308,13 +150,13 @@ COLOPHON
 GNU                               1996-05-17                          FREAD(3)
 ---
 
-14 years old and fits in 47 lines.  god bless.
+14 years old and 47 lines.  god bless.
 
 fread(fp, 
 
 oh right, this is probably more complicated then it needs to be.  Isn't there
-some other f-something that reads one character at a time?  like this is
-basic C, i should know this, but it's not in the SEE ALSO.  Hmm..
+some other f-something that reads one character at a time?  This is
+basic C, I should know this, but it's not in the SEE ALSO.  Hmm..
 
 $ man fopen (nothing rings a bell in SEE ALSO, although I note the date is
 much newer: 2009-02-23)
@@ -408,32 +250,7 @@ COLOPHON
 
 GNU                               2008-08-06                           GETS(3)
 
-Finally.  But then:
----
-22:55 <@nebkor> In file included from 
-/home/ardent/alembic/lib/Alembic/Util/Tests/DimensionsTestJeffs.cpp:35:
-22:55 <@nebkor> /home/ardent/alembic/lib/Alembic/Util/Dimensions.h:63: error: 
-                explicit specialization in non-namespace scope ‘class 
-                Alembic::Util::BaseDimensions<T>’
-22:55 <@nebkor> /home/ardent/alembic/lib/Alembic/Util/Dimensions.h:84: error: 
-                too many template-parameter-lists
-22:55 <@nebkor> /home/ardent/alembic/lib/Alembic/Util/Dimensions.h:100: error: 
-                too many template-parameter-lists
-23:05 <@nebkor> ah, well
-23:05 <@saul> man, that sucks
-23:05 <@saul> weird
-23:05 <@saul> wtf shit compiler is that
----
-
-anyway, fgetc is exactly what I want:
-
-(fclose happened in a brainfart lull--and it makes me feel good about myself).
-
-well i'm bored without my dose of satisfaction so let's make this do SOMETHING,
-at least
-
-23:09 <@nebkor> gcc 4.3
-
+fgetc is exactly what I want:
 
 int
 main(int argc, const char *argv[])
@@ -462,7 +279,7 @@ main.c:10: warning: incompatible implicit declaration of built-in function ‘pr
 make: *** [brainfuck] Error 1
 ---
 I'm a little surprised that I get so many errors for code that I know 
-is completely legit.  oh right, undeclared:
+is completely legit.
 
 #include <stdio.h>
 
@@ -499,8 +316,7 @@ cc -o brainfuck main.c
 > .                     print '\n'
 �$
 
-Okay, yawning now, let's get this show on the road.  From what I read
-in the article, 
+Okay, let's get this show on the road.  From what I read in the article, 
 
     // right, we need a data pointer I think
 
@@ -544,15 +360,12 @@ in the article,
         };
     }
 
-of course, okay, this is kind of neat actually.  not actually even necessarily
-obfuscated.  The name is becoming unfortunate though.
+This is kind of neat actually.  not actually even necessarily obfuscated.
 
-okay, I need to store the program and make an instruction pointer, and how am I
+I need to store the program and make an instruction pointer, and how am I
 going to "match" the [] like parentheses?  i think first of a stack, but that
 would be easiest with C++ and i have a High Concept of keeping this as simple
 as possible.  So...
-
-
 
 
 #include <stdio.h>
@@ -629,9 +442,7 @@ main(int argc, const char *argv[])
     return 0;
 }
 
-and...i'm kinda bored.  11:38pm and I'm doing what?  I need some stim:
-
-cc -o brainfuck main.c
+$ cc -o brainfuck main.c
 main.c: In function ‘main’:
 main.c:23: error: ‘true’ undeclared (first use in this function)
 main.c:23: error: (Each undeclared identifier is reported only once
@@ -647,12 +458,6 @@ main.c:60: error: invalid type argument of ‘unary *’ (have ‘int’)
 make: *** [brainfuck] Error 1
 
 okay now that's motivating.
-
-and then i nearly got bored of doing the clerical cleanup work (some
-repetitive blah blah details that are more annoying to type than
-to just fix.  but each one represents a little thing I've learned
-how to do and seems relevant if I'm going to document it.  word vomit).
-push through.
 
 I'm beginning to doubt my choice of variable names.  maybe ptr and ip would
 have been better.  maybe instead of int indexes into their respective arrays,
@@ -682,9 +487,9 @@ $ make
 cc -o brainfuck main.c
 ./brainfuck hello.bf
 
-and...it hangs without saying anything.  hehe.  typical.
+and...it hangs without saying anything.  Typical.
 
-oh right, I didn't implement those two instructions.  hm.  how to do...
+Right, I didn't implement those two instructions.  hm.  how to do...
 
 I break down and
 
@@ -703,13 +508,12 @@ I break down and
                         n--;
                 }
 
-i realize that using a stack for the second case is an efficiency improvement
+I realize that using a stack for the second case is an efficiency improvement
 and completely unnecessary and overcomplicated.  just do inverse of the upper
-loop.  beginner mind.
+loop.
 
-i break down after writing half the ] and cutnpaste the code from the [. 
+I break down after writing half the ] and cutnpaste the code from the [.
 instr_ptr++ becomes instr_ptr-- in ] though, and ']'.  and n++/n-- reversed.
-clerical work.
 
 $ make
 cc -o brainfuck main.c
@@ -718,8 +522,6 @@ main.c:31: error: ‘IP’ undeclared (first use in this function)
 main.c:31: error: (Each undeclared identifier is reported only once
 main.c:31: error: for each function it appears in.)
 make: *** [brainfuck] Error 1
-
-erm...oh right, substitution was global
 
 :%s/program\[instr_ptr\]/IP
 
@@ -799,8 +601,9 @@ cc -o brainfuck main.c
 make: *** [brainfuck] Segmentation fault
 make: *** Deleting file `brainfuck'
 ---
-yup, pretty much the standard second outcome when you do anything non-trivial.
-(first is hang with no output).
+
+Pretty much the standard second outcome when you do anything non-trivial.
+(first was hang with no output).
 
 $ gdb brainfuck
 GNU gdb (GDB) 7.0-ubuntu
@@ -826,43 +629,6 @@ cc -o brainfuck main.c
 ./brainfuck hello.bf
 make: *** [test] Segmentation fault
 
-$ gdb brainfuck
-...
-Reading symbols from /home/saul/src/brainfuck/brainfuck...done.
-(gdb) run
-Starting program: /home/saul/src/brainfuck/brainfuck 
-
-Program received signal SIGSEGV, Segmentation fault.
-_IO_feof (fp=0x0) at feof.c:37
-37	feof.c: No such file or directory.
-	in feof.c
-(gdb) bt
-#0  _IO_feof (fp=0x0) at feof.c:37
-#1  0x0000000000400771 in main ()
-
-right, fp is NULL ("0x0" is 0 in hex).  the fopen must be failing.
-    FILE *fp = fopen(argv[1], "r");
-    
-    if (fp == NULL)
-    {
-        perror(NULL);
-        exit(1);
-    }
-
-    // first read in the entire program
-    while (! feof(fp)) 
-    {
-        *ip = fgetc(fp);
-        ip++;
-    }
-
-$ make
-cc -o brainfuck main.c
-main.c: In function ‘main’:
-
-and it hangs again.
-
-well, the fopen seems to be working now.  weird.
 
 rm brainfuck
 make a couple more times for good measure.
@@ -905,7 +671,7 @@ Program terminated with signal 11, Segmentation fault.
 (gdb) bt
 #0  0x0000000000400981 in main ()
 
-haha.  everything that can go wrong, does.  nothing goes smoothly.
+Everything that can go wrong, does.  nothing goes smoothly.
 
 test: brainfuck
 	./brainfuck hello.bf
@@ -937,111 +703,12 @@ main.c:16: warning: incompatible implicit declaration of built-in function ‘ex
 make: *** [test] Segmentation fault (core dumped)
 
 $ gdb brainfuck
-$ gdb brainfuck cire
-$ gdb brainfuck core
 
-Core was generated by `./brainfuck hello.bf'.
-Program terminated with signal 11, Segmentation fault.
-#0  0x0000000000400981 in main (argc=2, argv=0x7fff4af5b6a8) at main.c:82
-82	                    if (*ip == '[')
-
-what's after "decrement counter"?
-
-ah, debugging ].  shouldn't this just work? :)
-
-i'm so clever:
-
-printf("\b");
-
-but then i anticipate backspace not working over newlines:
-        if (*ip != '\n')
-            printf("%c", *ip);
-
-of course it doesn't help.  but:
-
-$ make 
-cc -ggdb -o brainfuck main.c
-main.c: In function ‘main’:
-main.c:16: warning: incompatible implicit declaration of built-in function ‘exit’
-./brainfuck hello.bf
-+++++ +++++             initialize counter (cell #0) to 10
-[                       use loop to set the next four cells to 70/100/30/10
-    > +++++ ++              add  7 to cell #1
-    > +++++ +++++           add 10 to cell #2 
-    > +++                   add  3 to cell #3
-    > +                     add  1 to cell #4
-    <<<< -                  decrement counter (cell #0)
-]]
-)0# llec( retnuoc tnemerced                  - <<<<    
-4# llec ot 1  dda                     + >    
-3# llec ot 3  dda                   +++ >    
- 2# llec ot 01 dda           +++++ +++++ >    
-1# llec ot 7  dda              ++ +++++ >    
-01/03/001/07 ot sllec ruof txen eht tes ot pool esu                       [
-01 ot )0# llec( retnuoc ezilaitini             +++++ +++++������c`��b��`��c��@	�+Q�f��@P��c��+Q����+Q�g!x��c��@P
-+Q������c��+Q�g/��c��+Q�@0�+Q����
-                                   ���+Q�g�ٶL�Ҵ��!�
-                                                         +Q�fa�+Q�����`+Q�`@,��b�(��b�+Q�?�X+Q�?���b����b��+Q�@�+Q+Q�@�+Q�>�ʐ����b��+Q�@���b�9�=�@X+Q�a`@,+Q�@X+Q�@�+Q�`<��b��+Q�`!���b�(<+Q�>����b�+Q�@P=��b�
-
----
-oh interesting, it's not stopping at the [ like I thought.  hmm..
-
-theory that int n = 1 would fix it (but it doesn't).
-
-                    printf("%d %c\n", *ip);
-
-...
-                    printf("%d %c\n", n, *ip);
-
-put ip++ and ip-- at the end of the loop instead
-1 [
-
-int n = 1;
-
-then while (*ip != 0)
-
----
-
-what's wrong?  maybe it just needs to run for awhile?
-
-(added -O2 to Makefile)
-
-...nope...15 seconds...
-
-$ gdb ./brainfuck hello.bf 
-Reading symbols from /home/saul/src/brainfuck/brainfuck...done.
-"/home/saul/src/brainfuck/hello.bf" is not a core dump: File format not recognized
-(gdb) qui
-$ gdb ./brainfuck 
-(gdb) run hello.bf 
-Starting program: /home/saul/src/brainfuck/brainfuck hello.bf
-^C
-Program received signal SIGINT, Interrupt.
-main (argc=2, argv=0x7fffffffe358) at main.c:84
-84	                    else if (*ip == ']')
-
-hmmm...inspect...think...remove ip++ from inner loops.  still 'hangs'.  haha.
-
-Program received signal SIGINT, Interrupt.
-main (argc=<value optimized out>, argv=<value optimized out>) at main.c:84
-84	                        n++;
-(gdb) bt
-#0  main (argc=<value optimized out>, argv=<value optimized out>) at main.c:84
-
-remove -O2
-
-i look at line 84.  it's just the n++, of course.  but it's only when *ip == ']'.  i've seen this a couple of times, and it's weird that of all the places
-to stop, it keeps stopping here when it's ], even though that's not a very
-frequent character in the text.
-
-so i think, maybe it's just going back and forth?  think...
-
-and i have to sleep on it.  2.5 hours so far (but a lot of other things and
-writing too). 
+after a couple of rounds, I decide I have to sleep on it.  2.5 hours so far.
 
 --- 2010-Oct-05 Tuesday 10:41pm ---
 
-finally branched out beyond http://en.wikipedia.org/wiki/Brainfuck:
+Finally branched out beyond http://en.wikipedia.org/wiki/Brainfuck:
 
 -> http://www.iwriteiam.nl/Ha_bf_inter.html (BF interpreter written in BF)
    -> http://www.hevanet.com/cristofd/dbfi.b
